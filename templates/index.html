@@ -6,62 +6,56 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #121212; color: #f8f9fa; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-        .navbar-saas { background-color: #18181b; border-bottom: 1px solid #27272a; padding: 1rem 2rem; }
-        .card-saas { background-color: #18181b; border: 1px solid #27272a; border-radius: 12px; transition: all 0.2s ease; }
-        .card-saas:hover { border-color: #ff6600; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255, 102, 0, 0.1); }
+        :root { --primary-red: #dc2626; --primary-red-hover: #b91c1c; --bg-dark: #121212; --card-bg: #18181b; --border-color: #27272a; }
+        body { background-color: var(--bg-dark); color: #f8f9fa; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        .navbar-saas { background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 1rem 2rem; }
+        .card-saas { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; transition: all 0.2s ease; }
+        .card-saas:hover { border-color: var(--primary-red); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(220, 38, 38, 0.15); }
         .product-img { height: 200px; object-fit: contain; background: #ffffff; padding: 15px; border-radius: 12px 12px 0 0; }
-        .btn-orange { background-color: #ff6600; color: white; font-weight: 600; border-radius: 8px; }
-        .btn-orange:hover { background-color: #e55c00; color: white; }
-        .modal-content { background-color: #18181b; color: white; border: 1px solid #27272a; }
+        .btn-red { background-color: var(--primary-red); color: white; font-weight: 600; border-radius: 8px; border: none; }
+        .btn-red:hover { background-color: var(--primary-red-hover); color: white; }
+        .text-red { color: var(--primary-red) !important; }
+        .badge-red { background-color: var(--primary-red) !important; }
+        .desc-box { max-height: 42px; overflow: hidden; transition: max-height 0.5s ease; }
+        .desc-box.expanded { max-height: 500px; transition: max-height 0.7s ease; }
+        .btn-more { cursor: pointer; color: var(--primary-red); font-weight: bold; font-size: 0.85rem; text-decoration: none; }
+        .btn-more:hover { color: var(--primary-red-hover); }
+        .modal-content { background-color: var(--card-bg); color: white; border: 1px solid var(--border-color); }
         .form-control { background-color: #27272a; border: 1px solid #3f3f46; color: white; }
-        .form-control:focus { background-color: #27272a; color: white; border-color: #ff6600; box-shadow: none; }
+        .form-control:focus { background-color: #27272a; color: white; border-color: var(--primary-red); box-shadow: none; }
     </style>
 </head>
 <body>
 
-    <!-- NAVBAR CORPORATIVA -->
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-saas sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold text-white" href="#"><span style="color: #ff6600;"><i class="fas fa-cube me-2"></i>Hardware</span>Store</a>
-            
+            <a class="navbar-brand fw-bold text-white" href="#"><span class="text-red"><i class="fas fa-cube me-2"></i>Hardware</span>Store</a>
             <div class="d-flex align-items-center gap-3">
-                <!-- Zona de Autenticación Dinámica -->
                 <div id="auth-container">
-                    <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#authModal">
+                    <button class="btn btn-outline-light btn-sm" onclick="abrirLogin()">
                         <i class="fas fa-user me-1"></i> Iniciar Sesión / Registrarse
                     </button>
                 </div>
-                
                 <div id="user-container" class="d-none align-items-center gap-3">
                     <span class="text-secondary small">Hola, <strong id="user-display" class="text-white"></strong></span>
                     <button onclick="cerrarSesion()" class="btn btn-outline-danger btn-sm">Salir</button>
                 </div>
-
-                <!-- Botón Carrito con Contador -->
                 <button class="btn btn-dark border-secondary position-relative px-3" onclick="abrirCarro()">
-                    <i class="fas fa-shopping-cart text-warning"></i> Carro
-                    <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+                    <i class="fas fa-shopping-cart text-red"></i> Carro
+                    <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill badge-red">0</span>
                 </button>
             </div>
         </div>
     </nav>
 
-    <!-- CONTENIDO PRINCIPAL / VITRINA -->
+    <!-- VITRINA DE PRODUCTOS -->
     <div class="container my-5">
-        <div class="row mb-4">
-            <div class="col">
-                <h1 class="h3 fw-bold">Componentes Disponibles</h1>
-                <p class="text-secondary">Selecciona los productos para agregarlos al carro y procesar tu orden con transacciones seguras.</p>
-            </div>
-        </div>
-
-        <div class="row" id="product-grid">
-            <!-- Renderizado dinámico vía JS -->
-        </div>
+        <h1 class="h3 fw-bold mb-4">Componentes Disponibles</h1>
+        <div class="row" id="product-grid"></div>
     </div>
 
-    <!-- MODAL DE AUTENTICACIÓN (LOGIN / REGISTRO) -->
+    <!-- MODAL 1: LOGIN -->
     <div class="modal fade" id="authModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4">
@@ -79,35 +73,60 @@
                         <input type="password" id="modal-pass" class="form-control" placeholder="••••••••">
                     </div>
                     <div class="d-grid gap-2">
-                        <button onclick="ejecutarLogin()" class="btn btn-orange">Iniciar Sesión</button>
-                        <button onclick="ejecutarRegistro()" class="btn btn-outline-secondary">Registrar nueva cuenta</button>
+                        <button onclick="ejecutarLogin()" class="btn btn-red">Iniciar Sesión</button>
+                        <button onclick="abrirRegistro()" class="btn btn-outline-secondary mt-2">¿No tienes cuenta? Registrar nueva cuenta</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DEL CARRITO DE COMPRAS -->
+    <!-- MODAL 2: REGISTRO (Nueva Ventana) -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <!-- Agregamos un borde rojo para diferenciar la ventana -->
+            <div class="modal-content p-4" style="border-color: var(--primary-red);">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Crear Nueva Cuenta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small">Nuevo Usuario</label>
+                        <input type="text" id="reg-user" class="form-control" placeholder="Crea un nombre de usuario">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small">Nueva Contraseña</label>
+                        <input type="password" id="reg-pass" class="form-control" placeholder="Crea una contraseña segura">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button onclick="ejecutarRegistro()" class="btn btn-red">Crear cuenta</button>
+                        <button onclick="abrirLogin()" class="btn btn-link text-secondary text-decoration-none mt-2">Ya tengo cuenta, volver a Iniciar Sesión</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CARRO -->
     <div class="modal fade" id="cartModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4">
                 <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2"></i>Tu Carro de Compras</h5>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2 text-red"></i>Tu Carro</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="cart-items-list" class="list-group mb-3 bg-transparent">
-                        <!-- Items del carro -->
-                    </div>
+                    <div id="cart-items-list" class="list-group mb-3 bg-transparent"></div>
                     <div class="d-grid">
-                        <button onclick="procesarCheckout()" class="btn btn-orange py-2">Procesar Pago (Checkout Atómico)</button>
+                        <button onclick="procesarCheckout()" class="btn btn-red py-2">Procesar Pago (Atómico)</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPTS DE FUNCIONALIDAD -->
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -115,6 +134,36 @@
             cargarProductos();
             actualizarContadorCarro();
         });
+
+        // NAVEGACIÓN ENTRE VENTANAS (MODALES)
+        function abrirLogin() {
+            const regModalEl = document.getElementById('registerModal');
+            if(regModalEl.classList.contains('show')) {
+                bootstrap.Modal.getInstance(regModalEl).hide();
+            }
+            const authModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('authModal'));
+            authModal.show();
+        }
+
+        function abrirRegistro() {
+            const authModalEl = document.getElementById('authModal');
+            if(authModalEl.classList.contains('show')) {
+                bootstrap.Modal.getInstance(authModalEl).hide();
+            }
+            const regModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('registerModal'));
+            regModal.show();
+        }
+
+        function toggleDesc(id, btnElement) {
+            const box = document.getElementById(`desc-${id}`);
+            if (box.classList.contains('expanded')) {
+                box.classList.remove('expanded');
+                btnElement.innerText = 'más...';
+            } else {
+                box.classList.add('expanded');
+                btnElement.innerText = 'menos...';
+            }
+        }
 
         async function cargarProductos() {
             try {
@@ -125,6 +174,9 @@
 
                 products.forEach(p => {
                     const sinStock = p.stock <= 0;
+                    const descText = p.description || 'Sin descripción disponible.';
+                    const needsCollapse = descText.length > 55;
+
                     grid.innerHTML += `
                         <div class="col-md-3 mb-4">
                             <div class="card card-saas h-100 shadow-sm">
@@ -132,12 +184,15 @@
                                 <div class="card-body d-flex flex-column">
                                     <h5 class="card-title text-white fw-bold h6">${p.name}</h5>
                                     <h4 class="text-white fw-bold my-2">$${p.price}</h4>
-                                    <p class="text-secondary small flex-grow-1">${p.description ? p.description.substring(0, 60) + '...' : ''}</p>
-                                    <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+                                    <div class="flex-grow-1 my-2">
+                                        <div id="desc-${p.id}" class="desc-box text-secondary small">${descText}</div>
+                                        ${needsCollapse ? `<a onclick="toggleDesc(${p.id}, this)" class="btn-more d-inline-block mt-1">más...</a>` : ''}
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="small text-muted">Stock:</span>
                                         <span class="badge bg-secondary">${p.stock} un.</span>
                                     </div>
-                                    <button onclick="agregarAlCarro(${p.id})" class="btn btn-orange w-100" ${sinStock ? 'disabled' : ''}>
+                                    <button onclick="agregarAlCarro(${p.id})" class="btn btn-red w-100" ${sinStock ? 'disabled' : ''}>
                                         ${sinStock ? 'Agotado' : 'Agregar al Carro'}
                                     </button>
                                 </div>
@@ -145,9 +200,37 @@
                         </div>
                     `;
                 });
-            } catch (e) { console.error("Error cargando productos", e); }
+            } catch (e) { console.error(e); }
         }
 
+        // LÓGICA DE REGISTRO
+        async function ejecutarRegistro() {
+            const username = document.getElementById('reg-user').value;
+            const password = document.getElementById('reg-pass').value;
+            if(!username || !password) { alert("Llena ambos campos"); return; }
+            
+            try {
+                const res = await fetch('http://127.0.0.1:8000/api/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const textData = await res.text();
+                if (res.ok) {
+                    alert("✅ ¡Cuenta creada exitosamente! Por favor, inicia sesión con tus nuevos datos.");
+                    // Limpiamos los campos y enviamos al usuario a la ventana de Login
+                    document.getElementById('reg-user').value = '';
+                    document.getElementById('reg-pass').value = '';
+                    abrirLogin(); 
+                } else {
+                    try { alert("❌ Error: " + JSON.parse(textData).error); } 
+                    catch(e) { alert("❌ Error interno del Servidor: " + textData); }
+                }
+            } catch (e) { alert("Falla de red."); }
+        }
+
+        // LÓGICA DE LOGIN
         async function ejecutarLogin() {
             const username = document.getElementById('modal-user').value;
             const password = document.getElementById('modal-pass').value;
@@ -163,23 +246,8 @@
                     localStorage.setItem('username', username);
                     bootstrap.Modal.getInstance(document.getElementById('authModal')).hide();
                     verificarEstadoSesion();
-                    alert("¡Sesión iniciada correctamente!");
+                    actualizarContadorCarro();
                 } else { alert("Credenciales incorrectas."); }
-            } catch (e) { console.error(e); }
-        }
-
-        async function ejecutarRegistro() {
-            const username = document.getElementById('modal-user').value;
-            const password = document.getElementById('modal-pass').value;
-            try {
-                const res = await fetch('http://127.0.0.1:8000/api/register/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                if (res.ok) {
-                    alert("¡Registro exitoso! Ya puedes iniciar sesión.");
-                } else { alert("Error al registrar usuario."); }
             } catch (e) { console.error(e); }
         }
 
@@ -196,18 +264,12 @@
             }
         }
 
-        function cerrarSesion() {
-            localStorage.clear();
-            location.reload();
-        }
+        function cerrarSesion() { localStorage.clear(); location.reload(); }
 
+        // LÓGICA DEL CARRO
         async function agregarAlCarro(productId) {
             const token = localStorage.getItem('access_token');
-            if (!token) {
-                alert("Debes iniciar sesión para agregar productos al carro.");
-                new bootstrap.Modal(document.getElementById('authModal')).show();
-                return;
-            }
+            if (!token) { abrirLogin(); return; }
             try {
                 const res = await fetch('http://127.0.0.1:8000/api/cart/', {
                     method: 'POST',
@@ -216,37 +278,47 @@
                 });
                 if (res.ok) {
                     actualizarContadorCarro();
-                    alert("¡Producto agregado al carro con éxito!");
-                } else { alert("No se pudo agregar el producto."); }
-            } catch (e) { console.error(e); }
+                    alert("🛒 ¡Agregado al carro!");
+                } else {
+                    const err = await res.json();
+                    alert("❌ " + err.error);
+                }
+            } catch (e) { alert("❌ Error de conexión."); }
+        }
+
+        async function eliminarDelCarro(productId) {
+            const token = localStorage.getItem('access_token');
+            try {
+                const res = await fetch('http://127.0.0.1:8000/api/cart/', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ product_id: productId })
+                });
+                if (res.ok) {
+                    abrirCarro();
+                    actualizarContadorCarro();
+                }
+            } catch (e) { alert("Error al eliminar."); }
         }
 
         async function actualizarContadorCarro() {
             const token = localStorage.getItem('access_token');
             if (!token) return;
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/cart/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await fetch('http://127.0.0.1:8000/api/cart/', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (res.ok) {
                     const data = await res.json();
-                    const totalItems = data.items ? data.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
-                    document.getElementById('cart-badge').innerText = totalItems;
+                    const total = data.items ? data.items.reduce((s, i) => s + i.quantity, 0) : 0;
+                    document.getElementById('cart-badge').innerText = total;
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         async function abrirCarro() {
             const token = localStorage.getItem('access_token');
-            if (!token) {
-                alert("Inicia sesión para ver tu carro.");
-                new bootstrap.Modal(document.getElementById('authModal')).show();
-                return;
-            }
+            if (!token) { abrirLogin(); return; }
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/cart/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await fetch('http://127.0.0.1:8000/api/cart/', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (res.ok) {
                     const data = await res.json();
                     const list = document.getElementById('cart-items-list');
@@ -261,12 +333,17 @@
                                         <h6 class="mb-0">${item.product_name}</h6>
                                         <small class="text-muted">Cant: ${item.quantity} | $${item.price} c/u</small>
                                     </div>
-                                    <span class="badge bg-warning text-dark">$${item.price * item.quantity}</span>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="badge badge-red">$${item.price * item.quantity}</span>
+                                        <button onclick="eliminarDelCarro(${item.product})" class="btn btn-sm btn-outline-danger border-0">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             `;
                         });
                     }
-                    new bootstrap.Modal(document.getElementById('cartModal')).show();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('cartModal')).show();
                 }
             } catch (e) { console.error(e); }
         }
@@ -274,19 +351,15 @@
         async function procesarCheckout() {
             const token = localStorage.getItem('access_token');
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/checkout/', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await fetch('http://127.0.0.1:8000/api/checkout/', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
                 if (res.ok) {
-                    alert("🎉 ¡Transacción atómica y compra realizada con éxito!");
-                    bootstrap.Modal.getInstance(document.getElementById('cartModal')).hide();
+                    alert("🎉 ¡Transacción exitosa! Tu pedido está en camino.");
                     location.reload();
                 } else {
                     const err = await res.json();
-                    alert("Error en el pago: " + (err.error || err.detail));
+                    alert("Error: " + (err.error || "Falla desconocida"));
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
     </script>
 </body>

@@ -2,7 +2,6 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Category, Product, Cart, CartItem
 
-# 1. JWT Serializer
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -17,7 +16,6 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source='category.name')
-    
     class Meta:
         model = Product
         fields = ['id', 'sku', 'name', 'brand', 'price', 'stock', 'description', 'category', 'category_name', 'critical_stock', 'image']
@@ -25,15 +23,18 @@ class ProductSerializer(serializers.ModelSerializer):
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
     price = serializers.ReadOnlyField(source='product.price')
-
     class Meta:
         model = CartItem
         fields = ['id', 'product', 'product_name', 'price', 'quantity']
 
-# 2. Agregamos CartSerializer para que coincida exactamente con lo que pide tu views.py
 class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(many=True, read_only=True, source='cartitem_set')
+    # Usamos SerializerMethodField para evitar errores de nombres en la Base de Datos
+    items = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
         fields = ['id', 'user', 'items']
+
+    def get_items(self, obj):
+        items = CartItem.objects.filter(cart=obj)
+        return CartItemSerializer(items, many=True).data
