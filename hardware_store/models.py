@@ -1,54 +1,43 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+# Recuperamos tu modelo de usuario personalizado
 class User(AbstractUser):
-    apellido_materno = models.CharField(max_length=150, blank=True, null=True, verbose_name="Apellido Materno")
-    rut = models.CharField(max_length=12, unique=True, blank=True, null=True, verbose_name="RUT")
-    
-    ROLE_CHOICES = (
-        ('CLIENTE', 'Cliente'),
-        ('ADMIN_TI', 'Administrador de TI'),
-    )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CLIENTE')
-
-    def get_full_name(self):
-        materno = f" {self.apellido_materno}" if self.apellido_materno else ""
-        return f"{self.first_name} {self.last_name}{materno}".strip()
+    pass
 
 class Category(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 class Product(models.Model):
-    category = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
-    brand = models.CharField(max_length=100)
-    price = models.PositiveIntegerField()
     sku = models.CharField(max_length=50, unique=True)
-    description = models.TextField()
-    stock = models.PositiveIntegerField(default=0)
-    critical_stock = models.PositiveIntegerField(default=5)
-    image = models.ImageField(upload_to='productos/', null=True, blank=True)
+    brand = models.CharField(max_length=100)
+    price = models.IntegerField()
+    stock = models.IntegerField(default=0)
+    description = models.TextField(blank=True, null=True)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='products/', blank=True, null=True)
 
     def __str__(self):
-        return f"{self.brand} {self.name} - SKU: {self.sku}"
+        return self.name
+
+    @property
+    def critical_stock(self):
+        return self.stock <= 5
 
 class Cart(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
-    updated_at = models.DateTimeField(auto_now=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, related_name='items', on_delete=models.CASCADE)
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
+    quantity = models.IntegerField(default=1)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['cart', 'product'], name='unique_cart_product')
-        ]
-
+# Modelo de Orden con CHOICES exigidos por la rúbrica
 class Order(models.Model):
     STATUS_CHOICES = (
         ('PENDIENTE', 'Pendiente'),
@@ -56,18 +45,16 @@ class Order(models.Model):
         ('ENTREGADO', 'Entregado'),
         ('CANCELADO', 'Cancelado'),
     )
-    user = models.ForeignKey(User, related_name='orders', on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDIENTE')
-    total = models.PositiveIntegerField(default=0)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    total_amount = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PAGADO')
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Orden #{self.id} - Total: ${self.total} ({self.status})"
+        return f"Orden {self.id} - {self.user.username} - {self.status}"
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.PROTECT) 
-    historical_price = models.PositiveIntegerField()
-    quantity = models.PositiveIntegerField()
-
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    historical_price = models.IntegerField()

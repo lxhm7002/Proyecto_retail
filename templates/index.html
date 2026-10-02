@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --primary-red: #dc2626; --primary-red-hover: #b91c1c; --bg-dark: #121212; --card-bg: #18181b; --border-color: #27272a; }
-        body { background-color: var(--bg-dark); color: #f8f9fa; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-dark); color: #f8f9fa; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+        .main-content { flex: 1; }
         .navbar-saas { background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 1rem 2rem; }
         .card-saas { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; transition: all 0.2s ease; }
         .card-saas:hover { border-color: var(--primary-red); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(220, 38, 38, 0.15); }
@@ -19,24 +20,20 @@
         .desc-box { max-height: 42px; overflow: hidden; transition: max-height 0.5s ease; }
         .desc-box.expanded { max-height: 500px; transition: max-height 0.7s ease; }
         .btn-more { cursor: pointer; color: var(--primary-red); font-weight: bold; font-size: 0.85rem; text-decoration: none; }
-        .btn-more:hover { color: var(--primary-red-hover); }
         .modal-content { background-color: var(--card-bg); color: white; border: 1px solid var(--border-color); }
-        .form-control { background-color: #27272a; border: 1px solid #3f3f46; color: white; }
-        .form-control:focus { background-color: #27272a; color: white; border-color: var(--primary-red); box-shadow: none; }
+        .form-control, .form-select { background-color: #27272a; border: 1px solid #3f3f46; color: white; }
+        .form-control:focus, .form-select:focus { background-color: #27272a; color: white; border-color: var(--primary-red); box-shadow: none; }
+        .footer-saas { border-top: 1px solid var(--border-color); background-color: var(--card-bg); padding: 1.5rem 0; margin-top: auto; }
     </style>
 </head>
 <body>
 
-    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-saas sticky-top">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold text-white" href="#"><span class="text-red"><i class="fas fa-cube me-2"></i>Hardware</span>Store</a>
             <div class="d-flex align-items-center gap-3">
-                <div id="auth-container">
-                    <button class="btn btn-outline-light btn-sm" onclick="abrirLogin()">
-                        <i class="fas fa-user me-1"></i> Iniciar Sesión / Registrarse
-                    </button>
-                </div>
+                <button id="btn-proveedor" class="btn btn-warning btn-sm fw-bold d-none" onclick="abrirPanelProveedor()"><i class="fas fa-boxes me-1"></i> Panel Proveedor</button>
+                <div id="auth-container"><button class="btn btn-outline-light btn-sm" onclick="abrirLogin()"><i class="fas fa-user me-1"></i> Ingresar</button></div>
                 <div id="user-container" class="d-none align-items-center gap-3">
                     <span class="text-secondary small">Hola, <strong id="user-display" class="text-white"></strong></span>
                     <button onclick="cerrarSesion()" class="btn btn-outline-danger btn-sm">Salir</button>
@@ -49,317 +46,209 @@
         </div>
     </nav>
 
-    <!-- VITRINA DE PRODUCTOS -->
-    <div class="container my-5">
+    <div class="container my-5 main-content">
         <h1 class="h3 fw-bold mb-4">Componentes Disponibles</h1>
         <div class="row" id="product-grid"></div>
     </div>
 
-    <!-- MODAL 1: LOGIN -->
+    <!-- MODAL PROVEEDOR -->
+    <div class="modal fade" id="proveedorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content p-4 border-warning">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-warning"><i class="fas fa-clipboard-list me-2"></i>Centro de Proveedores</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alertas-stock" class="mb-4">
+                        <h6 class="text-white fw-bold mb-3">Mensajes de Stock Crítico:</h6>
+                        <div id="lista-alertas"></div>
+                    </div>
+                    <hr class="border-secondary">
+                    <h6 class="text-white fw-bold mb-3">Actualizar Stock Existente:</h6>
+                    <form id="form-stock" onsubmit="sumarStock(event)" class="row g-2 mb-4">
+                        <div class="col-md-6"><select id="select-productos" class="form-select" required></select></div>
+                        <div class="col-md-3"><input type="number" id="input-sumar-stock" class="form-control" placeholder="+ Cantidad" min="1" required></div>
+                        <div class="col-md-3"><button type="submit" class="btn btn-success w-100 fw-bold">Reabastecer</button></div>
+                    </form>
+                    <hr class="border-secondary">
+                    <h6 class="text-white fw-bold mb-3">Publicar Nuevo Producto:</h6>
+                    <form id="form-proveedor" onsubmit="crearProducto(event)">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="small text-secondary">Nombre del producto</label><input type="text" name="name" class="form-control" required></div>
+                            <div class="col-md-3"><label class="small text-secondary">SKU</label><input type="text" name="sku" class="form-control" required></div>
+                            <div class="col-md-3"><label class="small text-secondary">Marca</label><input type="text" name="brand" class="form-control" required></div>
+                            <div class="col-md-4"><label class="small text-secondary">Precio ($)</label><input type="number" name="price" class="form-control" required></div>
+                            <div class="col-md-4"><label class="small text-secondary">Stock Inicial</label><input type="number" name="stock" class="form-control" required></div>
+                            <div class="col-md-4">
+                                <label class="small text-secondary">Categoría</label>
+                                <select name="category" id="select-categoria" class="form-select" required><option value="">Cargando...</option></select>
+                            </div>
+                            <div class="col-12"><label class="small text-secondary">Imagen del Producto</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+                            <div class="col-12"><label class="small text-secondary">Descripción</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+                            <div class="col-12"><button type="submit" class="btn btn-warning w-100 fw-bold text-dark mt-2">Agregar Producto a la Vitrina</button></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOGIN -->
     <div class="modal fade" id="authModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content p-4">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold">Acceso a la Plataforma</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label text-secondary small">Usuario</label>
-                        <input type="text" id="modal-user" class="form-control" placeholder="Ingrese su usuario">
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label text-secondary small">Contraseña</label>
-                        <input type="password" id="modal-pass" class="form-control" placeholder="••••••••">
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button onclick="ejecutarLogin()" class="btn btn-red">Iniciar Sesión</button>
-                        <button onclick="abrirRegistro()" class="btn btn-outline-secondary mt-2">¿No tienes cuenta? Registrar nueva cuenta</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-4"><div class="modal-header border-0"><h5 class="modal-title fw-bold">Acceso a la Plataforma</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="modal-user" class="form-control mb-3" placeholder="Usuario"><input type="password" id="modal-pass" class="form-control mb-4" placeholder="Contraseña"><button onclick="ejecutarLogin()" class="btn btn-red w-100">Iniciar Sesión</button><button onclick="abrirRegistro()" class="btn btn-outline-secondary w-100 mt-2">Registrar nueva cuenta</button></div></div></div>
     </div>
 
-    <!-- MODAL 2: REGISTRO (Nueva Ventana) -->
+    <!-- MODAL REGISTRO -->
     <div class="modal fade" id="registerModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <!-- Agregamos un borde rojo para diferenciar la ventana -->
-            <div class="modal-content p-4" style="border-color: var(--primary-red);">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold">Crear Nueva Cuenta</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label text-secondary small">Nuevo Usuario</label>
-                        <input type="text" id="reg-user" class="form-control" placeholder="Crea un nombre de usuario">
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label text-secondary small">Nueva Contraseña</label>
-                        <input type="password" id="reg-pass" class="form-control" placeholder="Crea una contraseña segura">
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button onclick="ejecutarRegistro()" class="btn btn-red">Crear cuenta</button>
-                        <button onclick="abrirLogin()" class="btn btn-link text-secondary text-decoration-none mt-2">Ya tengo cuenta, volver a Iniciar Sesión</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-4" style="border-color: var(--primary-red);"><div class="modal-header border-0"><h5 class="modal-title fw-bold">Crear Cuenta</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="reg-user" class="form-control mb-3" placeholder="Nuevo Usuario"><input type="password" id="reg-pass" class="form-control mb-4" placeholder="Nueva Contraseña"><button onclick="ejecutarRegistro()" class="btn btn-red w-100">Crear cuenta</button><button onclick="abrirLogin()" class="btn btn-link text-secondary text-decoration-none w-100 mt-2">Volver a Iniciar Sesión</button></div></div></div>
     </div>
 
-    <!-- MODAL 3: CARRO -->
+    <!-- MODAL CARRO -->
     <div class="modal fade" id="cartModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content p-4">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2 text-red"></i>Tu Carro</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="cart-items-list" class="list-group mb-3 bg-transparent"></div>
-                    <div class="d-grid">
-                        <button onclick="procesarCheckout()" class="btn btn-red py-2">Procesar Pago (Atómico)</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-4"><div class="modal-header border-0"><h5 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2 text-red"></i>Tu Carro</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="cart-items-list" class="list-group mb-3 bg-transparent"></div><button onclick="procesarCheckout()" class="btn btn-red w-100 py-2">Procesar Pago (Atómico)</button></div></div></div>
     </div>
 
-    <!-- SCRIPTS -->
+    <!-- FOOTER OBLIGATORIO RÚBRICA -->
+    <footer class="footer-saas text-center">
+        <div class="container">
+            <p class="text-secondary small mb-1 fw-bold">Desarrollado por: Leandro Heraldo Melivilu Arias</p>
+            <p class="text-secondary small mb-0">Estudiante de Ingeniería en Ciberseguridad | INACAP Temuco | Año: 2026</p>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
+        let productosGlobal = [];
+
+document.addEventListener("DOMContentLoaded", () => {
+            // NUEVO: Interceptor de URLs malas (Error 404 visual)
+            if (window.location.pathname !== '/') {
+                // Reemplaza toda la pantalla con el mensaje de error temporal
+                document.body.innerHTML = `
+                    <div class="d-flex flex-column justify-content-center align-items-center vh-100" style="background-color: #121212;">
+                        <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
+                        <h2 class="text-white fw-bold">Ups, página no encontrada</h2>
+                        <p class="text-secondary mt-2">Redireccionando a la tienda de forma segura...</p>
+                        <div class="spinner-border text-danger mt-3" role="status"></div>
+                    </div>
+                `;
+                // Espera 2.5 segundos y limpia la URL redirigiendo al inicio real
+                setTimeout(() => { window.location.replace('/'); }, 2500);
+                return; // Detiene la ejecución para no cargar los productos en la ruta mala
+            }
+
+            // Si la ruta es correcta, carga la tienda normalmente
             verificarEstadoSesion();
             cargarProductos();
             actualizarContadorCarro();
         });
 
-        // NAVEGACIÓN ENTRE VENTANAS (MODALES)
-        function abrirLogin() {
-            const regModalEl = document.getElementById('registerModal');
-            if(regModalEl.classList.contains('show')) {
-                bootstrap.Modal.getInstance(regModalEl).hide();
-            }
-            const authModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('authModal'));
-            authModal.show();
-        }
-
-        function abrirRegistro() {
-            const authModalEl = document.getElementById('authModal');
-            if(authModalEl.classList.contains('show')) {
-                bootstrap.Modal.getInstance(authModalEl).hide();
-            }
-            const regModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('registerModal'));
-            regModal.show();
-        }
-
-        function toggleDesc(id, btnElement) {
-            const box = document.getElementById(`desc-${id}`);
-            if (box.classList.contains('expanded')) {
-                box.classList.remove('expanded');
-                btnElement.innerText = 'más...';
-            } else {
-                box.classList.add('expanded');
-                btnElement.innerText = 'menos...';
-            }
-        }
+        function getJwtPayload(token) { try { return JSON.parse(atob(token.split('.')[1])); } catch(e) { return null; } }
+        function abrirLogin() { bootstrap.Modal.getOrCreateInstance(document.getElementById('registerModal')).hide(); bootstrap.Modal.getOrCreateInstance(document.getElementById('authModal')).show(); }
+        function abrirRegistro() { bootstrap.Modal.getOrCreateInstance(document.getElementById('authModal')).hide(); bootstrap.Modal.getOrCreateInstance(document.getElementById('registerModal')).show(); }
+        function toggleDesc(id, btn) { const b = document.getElementById(`desc-${id}`); if(b.classList.contains('expanded')){ b.classList.remove('expanded'); btn.innerText = 'más...'; }else{ b.classList.add('expanded'); btn.innerText = 'menos...'; } }
 
         async function cargarProductos() {
             try {
                 const res = await fetch('http://127.0.0.1:8000/api/products/');
-                const products = await res.json();
+                productosGlobal = await res.json();
                 const grid = document.getElementById('product-grid');
                 grid.innerHTML = '';
-
-                products.forEach(p => {
+                productosGlobal.forEach(p => {
                     const sinStock = p.stock <= 0;
                     const descText = p.description || 'Sin descripción disponible.';
-                    const needsCollapse = descText.length > 55;
-
-                    grid.innerHTML += `
-                        <div class="col-md-3 mb-4">
-                            <div class="card card-saas h-100 shadow-sm">
-                                <img src="${p.image || 'https://via.placeholder.com/200'}" class="card-img-top product-img" alt="${p.name}">
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title text-white fw-bold h6">${p.name}</h5>
-                                    <h4 class="text-white fw-bold my-2">$${p.price}</h4>
-                                    <div class="flex-grow-1 my-2">
-                                        <div id="desc-${p.id}" class="desc-box text-secondary small">${descText}</div>
-                                        ${needsCollapse ? `<a onclick="toggleDesc(${p.id}, this)" class="btn-more d-inline-block mt-1">más...</a>` : ''}
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span class="small text-muted">Stock:</span>
-                                        <span class="badge bg-secondary">${p.stock} un.</span>
-                                    </div>
-                                    <button onclick="agregarAlCarro(${p.id})" class="btn btn-red w-100" ${sinStock ? 'disabled' : ''}>
-                                        ${sinStock ? 'Agotado' : 'Agregar al Carro'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    grid.innerHTML += `<div class="col-md-3 mb-4"><div class="card card-saas h-100 shadow-sm border-${sinStock ? 'danger' : 'secondary'}"><img src="${p.image || 'https://via.placeholder.com/200'}" class="card-img-top product-img" alt="${p.name}"><div class="card-body d-flex flex-column"><h5 class="card-title text-white fw-bold h6">${p.name}</h5><h4 class="text-white fw-bold my-2">$${p.price}</h4><div class="flex-grow-1 my-2"><div id="desc-${p.id}" class="desc-box text-secondary small">${descText}</div>${descText.length > 55 ? `<a onclick="toggleDesc(${p.id}, this)" class="btn-more d-inline-block mt-1">más...</a>` : ''}</div><div class="d-flex justify-content-between align-items-center mb-3"><span class="small text-muted">Stock:</span><span class="badge ${p.stock <= 5 ? 'bg-danger' : 'bg-secondary'}">${p.stock} un.</span></div><button onclick="agregarAlCarro(${p.id})" class="btn btn-red w-100" ${sinStock ? 'disabled' : ''}>${sinStock ? 'Agotado' : 'Agregar al Carro'}</button></div></div></div>`;
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
-        // LÓGICA DE REGISTRO
-        async function ejecutarRegistro() {
-            const username = document.getElementById('reg-user').value;
-            const password = document.getElementById('reg-pass').value;
-            if(!username || !password) { alert("Llena ambos campos"); return; }
-            
-            try {
-                const res = await fetch('http://127.0.0.1:8000/api/register/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const textData = await res.text();
-                if (res.ok) {
-                    alert("✅ ¡Cuenta creada exitosamente! Por favor, inicia sesión con tus nuevos datos.");
-                    // Limpiamos los campos y enviamos al usuario a la ventana de Login
-                    document.getElementById('reg-user').value = '';
-                    document.getElementById('reg-pass').value = '';
-                    abrirLogin(); 
-                } else {
-                    try { alert("❌ Error: " + JSON.parse(textData).error); } 
-                    catch(e) { alert("❌ Error interno del Servidor: " + textData); }
-                }
-            } catch (e) { alert("Falla de red."); }
-        }
-
-        // LÓGICA DE LOGIN
         async function ejecutarLogin() {
-            const username = document.getElementById('modal-user').value;
-            const password = document.getElementById('modal-pass').value;
+            const u = document.getElementById('modal-user').value, p = document.getElementById('modal-pass').value;
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/token/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
+                const res = await fetch('http://127.0.0.1:8000/api/token/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username:u, password:p }) });
                 if (res.ok) {
-                    const data = await res.json();
-                    localStorage.setItem('access_token', data.access);
-                    localStorage.setItem('username', username);
-                    bootstrap.Modal.getInstance(document.getElementById('authModal')).hide();
-                    verificarEstadoSesion();
-                    actualizarContadorCarro();
+                    const data = await res.json(); localStorage.setItem('access_token', data.access); localStorage.setItem('username', u);
+                    bootstrap.Modal.getInstance(document.getElementById('authModal')).hide(); verificarEstadoSesion(); actualizarContadorCarro();
                 } else { alert("Credenciales incorrectas."); }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
+        }
+
+        async function ejecutarRegistro() {
+            const u = document.getElementById('reg-user').value, p = document.getElementById('reg-pass').value;
+            try {
+                const res = await fetch('http://127.0.0.1:8000/api/register/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username:u, password:p }) });
+                if (res.ok) { alert("¡Cuenta creada!"); abrirLogin(); } else { const err = await res.json(); alert("Error: " + err.error); }
+            } catch (e) {}
         }
 
         function verificarEstadoSesion() {
-            const token = localStorage.getItem('access_token');
-            const username = localStorage.getItem('username');
-            if (token && username) {
-                document.getElementById('auth-container').classList.add('d-none');
-                document.getElementById('user-container').classList.remove('d-none');
-                document.getElementById('user-display').innerText = username;
+            const token = localStorage.getItem('access_token'), user = localStorage.getItem('username');
+            if (token && user) {
+                document.getElementById('auth-container').classList.add('d-none'); document.getElementById('user-container').classList.remove('d-none'); document.getElementById('user-display').innerText = user;
+                const pl = getJwtPayload(token);
+                if(pl && pl.is_staff) document.getElementById('btn-proveedor').classList.remove('d-none'); else document.getElementById('btn-proveedor').classList.add('d-none');
             } else {
-                document.getElementById('auth-container').classList.remove('d-none');
-                document.getElementById('user-container').classList.add('d-none');
+                document.getElementById('auth-container').classList.remove('d-none'); document.getElementById('user-container').classList.add('d-none'); document.getElementById('btn-proveedor').classList.add('d-none');
             }
         }
-
         function cerrarSesion() { localStorage.clear(); location.reload(); }
 
-        // LÓGICA DEL CARRO
-        async function agregarAlCarro(productId) {
-            const token = localStorage.getItem('access_token');
-            if (!token) { abrirLogin(); return; }
+        // ----- PROVEEDOR -----
+        async function abrirPanelProveedor() {
+            const alertasDiv = document.getElementById('lista-alertas'); alertasDiv.innerHTML = '';
+            const crit = productosGlobal.filter(p => p.stock <= 5);
+            if(crit.length === 0) alertasDiv.innerHTML = '<p class="text-secondary small">Todo en orden.</p>';
+            else crit.forEach(p => { alertasDiv.innerHTML += `<div class="alert alert-danger py-2 px-3 mb-2 small"><i class="fas fa-exclamation-triangle me-2"></i><strong>URGENTE:</strong> ${p.name} tiene stock crítico (${p.stock}).</div>`; });
+            const sel = document.getElementById('select-productos'); sel.innerHTML = '<option value="">Selecciona producto...</option>';
+            productosGlobal.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (Actual: ${p.stock})</option>`; });
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/cart/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ product_id: productId })
-                });
-                if (res.ok) {
-                    actualizarContadorCarro();
-                    alert("🛒 ¡Agregado al carro!");
-                } else {
-                    const err = await res.json();
-                    alert("❌ " + err.error);
+                const resCat = await fetch('http://127.0.0.1:8000/api/categories/');
+                if(resCat.ok) {
+                    const cat = await resCat.json(), sCat = document.getElementById('select-categoria'); sCat.innerHTML = '<option value="">Selecciona categoría...</option>';
+                    cat.forEach(c => { sCat.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
                 }
-            } catch (e) { alert("❌ Error de conexión."); }
+            } catch(e) {}
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('proveedorModal')).show();
         }
 
-        async function eliminarDelCarro(productId) {
-            const token = localStorage.getItem('access_token');
-            try {
-                const res = await fetch('http://127.0.0.1:8000/api/cart/', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ product_id: productId })
-                });
-                if (res.ok) {
-                    abrirCarro();
-                    actualizarContadorCarro();
-                }
-            } catch (e) { alert("Error al eliminar."); }
+        async function sumarStock(e) {
+            e.preventDefault(); const t = localStorage.getItem('access_token'), pid = document.getElementById('select-productos').value, qty = document.getElementById('input-sumar-stock').value;
+            try { const res = await fetch('http://127.0.0.1:8000/api/products/update-stock/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }, body: JSON.stringify({ product_id: pid, stock: qty }) });
+            if(res.ok){ alert("✅ Stock reabastecido."); bootstrap.Modal.getInstance(document.getElementById('proveedorModal')).hide(); cargarProductos(); } } catch(e){}
         }
 
+        async function crearProducto(e) {
+            e.preventDefault(); const t = localStorage.getItem('access_token'), fd = new FormData(document.getElementById('form-proveedor'));
+            try { const res = await fetch('http://127.0.0.1:8000/api/products/create/', { method: 'POST', headers: { 'Authorization': `Bearer ${t}` }, body: fd });
+            if(res.ok){ alert("✅ Producto publicado."); bootstrap.Modal.getInstance(document.getElementById('proveedorModal')).hide(); cargarProductos(); } } catch(e){}
+        }
+
+        // ----- CARRO -----
+        async function agregarAlCarro(id) {
+            const t = localStorage.getItem('access_token'); if(!t) { abrirLogin(); return; }
+            try { const res = await fetch('http://127.0.0.1:8000/api/cart/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }, body: JSON.stringify({ product_id: id }) });
+            if(res.ok){ actualizarContadorCarro(); alert("🛒 Agregado al carro"); } else { const err = await res.json(); alert("❌ " + err.error); } } catch(e){}
+        }
+        async function eliminarDelCarro(id) {
+            const t = localStorage.getItem('access_token'); try { const res = await fetch('http://127.0.0.1:8000/api/cart/', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }, body: JSON.stringify({ product_id: id }) }); if(res.ok) { abrirCarro(); actualizarContadorCarro(); } } catch(e){}
+        }
         async function actualizarContadorCarro() {
-            const token = localStorage.getItem('access_token');
-            if (!token) return;
-            try {
-                const res = await fetch('http://127.0.0.1:8000/api/cart/', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) {
-                    const data = await res.json();
-                    const total = data.items ? data.items.reduce((s, i) => s + i.quantity, 0) : 0;
-                    document.getElementById('cart-badge').innerText = total;
-                }
-            } catch (e) {}
+            const t = localStorage.getItem('access_token'); if(!t) return;
+            try { const res = await fetch('http://127.0.0.1:8000/api/cart/', { headers: { 'Authorization': `Bearer ${t}` } }); if(res.ok){ const d = await res.json(), tot = d.items ? d.items.reduce((s, i) => s + i.quantity, 0) : 0; document.getElementById('cart-badge').innerText = tot; } } catch(e){}
         }
-
         async function abrirCarro() {
-            const token = localStorage.getItem('access_token');
-            if (!token) { abrirLogin(); return; }
-            try {
-                const res = await fetch('http://127.0.0.1:8000/api/cart/', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) {
-                    const data = await res.json();
-                    const list = document.getElementById('cart-items-list');
-                    list.innerHTML = '';
-                    if (!data.items || data.items.length === 0) {
-                        list.innerHTML = '<p class="text-muted text-center my-3">Tu carro está vacío</p>';
-                    } else {
-                        data.items.forEach(item => {
-                            list.innerHTML += `
-                                <div class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center mb-2 rounded">
-                                    <div>
-                                        <h6 class="mb-0">${item.product_name}</h6>
-                                        <small class="text-muted">Cant: ${item.quantity} | $${item.price} c/u</small>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <span class="badge badge-red">$${item.price * item.quantity}</span>
-                                        <button onclick="eliminarDelCarro(${item.product})" class="btn btn-sm btn-outline-danger border-0">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-                        });
-                    }
-                    bootstrap.Modal.getOrCreateInstance(document.getElementById('cartModal')).show();
-                }
-            } catch (e) { console.error(e); }
+            const t = localStorage.getItem('access_token'); if(!t) { abrirLogin(); return; }
+            try { const res = await fetch('http://127.0.0.1:8000/api/cart/', { headers: { 'Authorization': `Bearer ${t}` } });
+            if(res.ok){ const d = await res.json(), list = document.getElementById('cart-items-list'); list.innerHTML = '';
+            if(!d.items || d.items.length === 0) list.innerHTML = '<p class="text-muted text-center my-3">Tu carro está vacío</p>';
+            else d.items.forEach(i => { list.innerHTML += `<div class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center mb-2 rounded"><div><h6 class="mb-0">${i.product_name}</h6><small class="text-muted">Cant: ${i.quantity} | $${i.price} c/u</small></div><div class="d-flex align-items-center gap-3"><span class="badge badge-red">$${i.price * i.quantity}</span><button onclick="eliminarDelCarro(${i.product})" class="btn btn-sm btn-outline-danger border-0"><i class="fas fa-trash"></i></button></div></div>`; });
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('cartModal')).show(); } } catch(e){}
         }
-
         async function procesarCheckout() {
-            const token = localStorage.getItem('access_token');
-            try {
-                const res = await fetch('http://127.0.0.1:8000/api/checkout/', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) {
-                    alert("🎉 ¡Transacción exitosa! Tu pedido está en camino.");
-                    location.reload();
-                } else {
-                    const err = await res.json();
-                    alert("Error: " + (err.error || "Falla desconocida"));
-                }
-            } catch (e) {}
+            const t = localStorage.getItem('access_token');
+            try { const res = await fetch('http://127.0.0.1:8000/api/checkout/', { method: 'POST', headers: { 'Authorization': `Bearer ${t}` } });
+            if(res.ok){ alert("🎉 ¡Transacción exitosa!"); location.reload(); } else { const err = await res.json(); alert("Error: " + err.error); } } catch(e){}
         }
     </script>
 </body>
