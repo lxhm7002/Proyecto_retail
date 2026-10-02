@@ -13,15 +13,9 @@ from .serializers import CustomTokenObtainPairSerializer, CategorySerializer, Pr
 
 User = get_user_model()
 
-# =========================================================
-# VISTA PRINCIPAL (FRONTEND SPA)
-# =========================================================
 def index(request):
     return render(request, 'index.html')
 
-# =========================================================
-# GESTIÓN DE CATÁLOGO Y FILTROS (django-filter)
-# =========================================================
 class CategoryListView(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -31,24 +25,20 @@ class ProductListView(generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [AllowAny]
-    # Integración de filtros obligatorios
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['category'] 
     search_fields = ['name', 'brand']
 
-# =========================================================
-# GESTIÓN DE PROVEEDORES / STAFF
-# =========================================================
 class ProductCreateView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
         if not request.user.is_staff:
-            return Response({"error": "Acceso denegado. Solo proveedores pueden agregar productos."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "Acceso denegado."}, status=status.HTTP_403_FORBIDDEN)
         serializer = ProductSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"mensaje": "Producto creado con éxito"}, status=status.HTTP_201_CREATED)
+            return Response({"mensaje": "Producto creado"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductUpdateStockView(APIView):
@@ -65,13 +55,29 @@ class ProductUpdateStockView(APIView):
             product = Product.objects.get(id=product_id)
             product.stock += int(cantidad_a_sumar)
             product.save()
-            return Response({"mensaje": "Stock actualizado con éxito"}, status=status.HTTP_200_OK)
+            return Response({"mensaje": "Stock actualizado"}, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
             return Response({"error": "Producto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-# =========================================================
-# ACTUALIZACIÓN DE ESTADOS DE ORDEN Y DEVOLUCIÓN DE STOCK
-# =========================================================
+# NUEVA CLASE PARA ELIMINAR PRODUCTOS
+class ProductDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request):
+        if not request.user.is_staff:
+            return Response({"error": "Acceso denegado."}, status=status.HTTP_403_FORBIDDEN)
+            
+        product_id = request.data.get('product_id')
+        if not product_id:
+            return Response({"error": "Falta el ID del producto."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            product = Product.objects.get(id=product_id)
+            product.delete()
+            return Response({"mensaje": "Producto eliminado con éxito"}, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({"error": "Producto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
 class OrderUpdateStatusView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -83,8 +89,6 @@ class OrderUpdateStatusView(APIView):
         try:
             with transaction.atomic():
                 order = Order.objects.get(id=order_id)
-                
-                # Si el administrador CANCELA, el stock vuelve al catálogo automáticamente
                 if new_status == 'CANCELADO' and order.status != 'CANCELADO':
                     items = OrderItem.objects.filter(order=order)
                     for item in items:
@@ -97,9 +101,6 @@ class OrderUpdateStatusView(APIView):
         except Order.DoesNotExist:
             return Response({"error": "Orden no encontrada"}, status=status.HTTP_404_NOT_FOUND)
 
-# =========================================================
-# FLUJO DEL CARRO Y TRANSACCIÓN ATÓMICA
-# =========================================================
 class CartDetailView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -152,7 +153,6 @@ class CheckoutView(APIView):
                     if item.product.stock < item.quantity:
                         raise ValueError(f"Stock insuficiente para {item.product.name}.")
                     
-                    # Descuento atómico del inventario
                     item.product.stock -= item.quantity
                     item.product.save()
                     
@@ -167,7 +167,6 @@ class CheckoutView(APIView):
                 order.total_amount = total
                 order.status = 'PAGADO'
                 order.save()
-                
                 items.delete()
                 
                 return Response({"mensaje": "Compra realizada con éxito", "orden_id": order.id}, status=status.HTTP_201_CREATED)
@@ -177,9 +176,6 @@ class CheckoutView(APIView):
         except Exception as e:
             return Response({"error": f"Falla en BD: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# =========================================================
-# AUTENTICACIÓN JWT Y REGISTRO
-# =========================================================
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -192,11 +188,11 @@ class RegisterView(APIView):
             password = request.data.get('password')
             
             if not username or not password:
-                return Response({"error": "Por favor ingresa un usuario y contraseña."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Usuario y contraseña requeridos."}, status=status.HTTP_400_BAD_REQUEST)
             if User.objects.filter(username=username).exists():
-                return Response({"error": f"El usuario '{username}' ya está registrado."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"El usuario '{username}' ya existe."}, status=status.HTTP_400_BAD_REQUEST)
             
             User.objects.create_user(username=username, password=password)
-            return Response({"message": "Usuario registrado con éxito"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Usuario registrado"}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({"error": f"Error interno en BD: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

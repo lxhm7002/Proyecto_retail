@@ -71,6 +71,15 @@
                         <div class="col-md-3"><input type="number" id="input-sumar-stock" class="form-control" placeholder="+ Cantidad" min="1" required></div>
                         <div class="col-md-3"><button type="submit" class="btn btn-success w-100 fw-bold">Reabastecer</button></div>
                     </form>
+                    
+                    <!-- NUEVO BLOQUE: Eliminar Producto -->
+                    <hr class="border-secondary">
+                    <h6 class="text-white fw-bold mb-3">Eliminar Producto:</h6>
+                    <form id="form-delete" onsubmit="eliminarProductoDefinitivo(event)" class="row g-2 mb-4">
+                        <div class="col-md-9"><select id="select-delete-productos" class="form-select" required></select></div>
+                        <div class="col-md-3"><button type="submit" class="btn btn-danger w-100 fw-bold"><i class="fas fa-trash"></i> Eliminar</button></div>
+                    </form>
+
                     <hr class="border-secondary">
                     <h6 class="text-white fw-bold mb-3">Publicar Nuevo Producto:</h6>
                     <form id="form-proveedor" onsubmit="crearProducto(event)">
@@ -109,7 +118,6 @@
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-4"><div class="modal-header border-0"><h5 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2 text-red"></i>Tu Carro</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="cart-items-list" class="list-group mb-3 bg-transparent"></div><button onclick="procesarCheckout()" class="btn btn-red w-100 py-2">Procesar Pago (Atómico)</button></div></div></div>
     </div>
 
-    <!-- FOOTER OBLIGATORIO RÚBRICA -->
     <footer class="footer-saas text-center">
         <div class="container">
             <p class="text-secondary small mb-1 fw-bold">Desarrollado por: Leandro Heraldo Melivilu Arias</p>
@@ -121,10 +129,8 @@
     <script>
         let productosGlobal = [];
 
-document.addEventListener("DOMContentLoaded", () => {
-            // NUEVO: Interceptor de URLs malas (Error 404 visual)
+        document.addEventListener("DOMContentLoaded", () => {
             if (window.location.pathname !== '/') {
-                // Reemplaza toda la pantalla con el mensaje de error temporal
                 document.body.innerHTML = `
                     <div class="d-flex flex-column justify-content-center align-items-center vh-100" style="background-color: #121212;">
                         <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
@@ -133,12 +139,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="spinner-border text-danger mt-3" role="status"></div>
                     </div>
                 `;
-                // Espera 2.5 segundos y limpia la URL redirigiendo al inicio real
                 setTimeout(() => { window.location.replace('/'); }, 2500);
-                return; // Detiene la ejecución para no cargar los productos en la ruta mala
+                return; 
             }
-
-            // Si la ruta es correcta, carga la tienda normalmente
             verificarEstadoSesion();
             cargarProductos();
             actualizarContadorCarro();
@@ -200,8 +203,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const crit = productosGlobal.filter(p => p.stock <= 5);
             if(crit.length === 0) alertasDiv.innerHTML = '<p class="text-secondary small">Todo en orden.</p>';
             else crit.forEach(p => { alertasDiv.innerHTML += `<div class="alert alert-danger py-2 px-3 mb-2 small"><i class="fas fa-exclamation-triangle me-2"></i><strong>URGENTE:</strong> ${p.name} tiene stock crítico (${p.stock}).</div>`; });
+            
+            // Poblar select de actualización
             const sel = document.getElementById('select-productos'); sel.innerHTML = '<option value="">Selecciona producto...</option>';
             productosGlobal.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (Actual: ${p.stock})</option>`; });
+            
+            // Poblar select de eliminación
+            const selDel = document.getElementById('select-delete-productos'); selDel.innerHTML = '<option value="">Selecciona producto para eliminar...</option>';
+            productosGlobal.forEach(p => { selDel.innerHTML += `<option value="${p.id}">${p.name} (ID: ${p.id})</option>`; });
+
             try {
                 const resCat = await fetch('http://127.0.0.1:8000/api/categories/');
                 if(resCat.ok) {
@@ -222,6 +232,22 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault(); const t = localStorage.getItem('access_token'), fd = new FormData(document.getElementById('form-proveedor'));
             try { const res = await fetch('http://127.0.0.1:8000/api/products/create/', { method: 'POST', headers: { 'Authorization': `Bearer ${t}` }, body: fd });
             if(res.ok){ alert("✅ Producto publicado."); bootstrap.Modal.getInstance(document.getElementById('proveedorModal')).hide(); cargarProductos(); } } catch(e){}
+        }
+
+        async function eliminarProductoDefinitivo(e) {
+            e.preventDefault();
+            if(!confirm("¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.")) return;
+            const t = localStorage.getItem('access_token');
+            const pid = document.getElementById('select-delete-productos').value;
+            try {
+                const res = await fetch('http://127.0.0.1:8000/api/products/delete/', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+                    body: JSON.stringify({ product_id: pid })
+                });
+                if(res.ok){ alert("✅ Producto eliminado exitosamente."); bootstrap.Modal.getInstance(document.getElementById('proveedorModal')).hide(); cargarProductos(); }
+                else { const err = await res.json(); alert("❌ Error: " + err.error); }
+            } catch(err) { alert("Error de conexión"); }
         }
 
         // ----- CARRO -----
